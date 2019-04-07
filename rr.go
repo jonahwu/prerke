@@ -200,6 +200,17 @@ func createSshKey(addr string, port string) {
 	//if err := session.Run("/usr/bin/whoami"); err != nil {
 	//cmd := "ls -al > scrremote"
 }
+func getPasswd() string {
+
+	//filename := os.Args[1]
+	filename := "password.txt"
+	passwd, err := ioutil.ReadFile(filename)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("password:", string(passwd))
+	return strings.Trim(string(passwd), "\n")
+}
 
 func getAddress() Configs {
 
@@ -234,6 +245,8 @@ func main() {
 	deployUser = "pentium"
 	var cmds string
 	config := getAddress()
+	sshpassword := getPasswd()
+	//fmt.Println("password:", sshpassword, sshpassword1, len(sshpassword), len(sshpassword1))
 	//fmt.Println("show first address:", config.Cfgs[0].Address)
 	//fmt.Println("lens of address:", len(config.Cfgs))
 	fmt.Println("----- check for 5 secs--------")
