@@ -1,5 +1,5 @@
 nodes:
-- address: 172.16.155.170
+- address: 172.16.155.150
   port: "22"
   internal_address: ""
   role:
@@ -13,7 +13,7 @@ nodes:
   ssh_key_path: /root/.ssh/id_rsa
   labels: {}
 
-- address: 172.16.155.171
+- address: 172.16.155.151
   port: "22"
   internal_address: ""
   role:

@@ -201,79 +201,6 @@ func createSshKey(addr string, port string) {
 	//cmd := "ls -al > scrremote"
 }
 
-func userTask(addr string, port string) {
-	ce := func(err error, msg string) {
-		if err != nil {
-			log.Fatalf("%s error: %v", msg, err)
-		}
-	}
-	addrPort := fmt.Sprintf("%s:%s", addr, port)
-	//client, err := ssh.Dial("tcp", "172.16.155.137:22", &ssh.ClientConfig{
-	fmt.Println(addrPort)
-	client, err := ssh.Dial("tcp", addrPort, &ssh.ClientConfig{
-		User:            sshuser,
-		Auth:            []ssh.AuthMethod{ssh.Password(sshpassword)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		//Auth: []ssh.AuthMethod{ssh.Password("^Two^Ten=1024$")},
-	})
-	ce(err, "dial")
-
-	session, err := client.NewSession()
-	if err != nil {
-		fmt.Println(err)
-	}
-	//ce(err, "new session")
-	defer session.Close()
-	//var b bytes.Buffer
-	//session.Stdout = &b
-
-	stdinBuf, _ := session.StdinPipe()
-
-	var outbt, errbt bytes.Buffer
-	session.Stdout = &outbt
-
-	session.Stderr = &errbt
-	//stdin, err := session.StdinPipe()
-	modes := ssh.TerminalModes{
-		ssh.ECHO:          0,     // disable echoing
-		ssh.TTY_OP_ISPEED: 14400, // input speed = 14.4kbaud
-		ssh.TTY_OP_OSPEED: 14400, // output speed = 14.4kbaud
-	}
-
-	if err := session.RequestPty("xterm", 80, 40, modes); err != nil {
-		log.Fatal(err)
-	}
-	err = session.Shell()
-	//cmds := "ls;ls -alh > ss;exit"
-	//cmds := "adduser pentium;promise;promise;1;1;1;1;1;Y;ls;exit"
-	//	cmds := "adduser pentium --gecos \"First Last,RoomNumber,WorkPhone,HomePhone\" --disabled-password;echo \"pentium:password\" | sudo chpasswd;exit"
-	cmds := fmt.Sprintf("adduser pentium --gecos \"First Last,RoomNumber,WorkPhone,HomePhone\" --disabled-password;echo \"pentium:%s\" | sudo chpasswd;gpasswd -a pentium docker;exit", sshpassword)
-	cmdlist := strings.Split(cmds, ";")
-	for _, c := range cmdlist {
-		c = c + "\n"
-		stdinBuf.Write([]byte(c))
-		fmt.Println(c)
-		//fmt.Println(session.Stdout)
-
-	}
-	/*
-		for _, cmd := range cmdlist {
-			fmt.Println(cmd)
-			_, err = fmt.Fprintf(stdin, "%s\n", cmd)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-	*/
-
-	session.Wait()
-	fmt.Println((outbt.String() + errbt.String()))
-	return
-	//if err := session.Run("/usr/bin/whoami"); err != nil {
-	//cmd := "ls -al > scrremote"
-
-}
-
 func getAddress() Configs {
 
 	var config Configs
@@ -333,7 +260,8 @@ func main() {
 		/* create user */
 		// for ubuntu
 		//cmds = fmt.Sprintf("adduser pentium --gecos \"First Last,RoomNumber,WorkPhone,HomePhone\" --disabled-password;echo \"pentium:%s\" | sudo chpasswd;gpasswd -a pentium docker", sshpassword)
-		cmds = fmt.Sprintf("adduser pentium ;echo \"pentium:%s\" | sudo chpasswd;usermod -aG wheel pentium;gpasswd -a pentium docker", sshpassword)
+		//cmds = fmt.Sprintf("adduser pentium ;echo \"pentium:%s\" | sudo chpasswd;usermod -aG wheel pentium;gpasswd -a pentium docker", sshpassword)
+		cmds = fmt.Sprintf("adduser %s ;echo \"%s:%s\" | sudo chpasswd;usermod -aG wheel %s;gpasswd -a %s docker", deployUser, deployUser, sshpassword, deployUser, deployUser)
 		remoteTaskPipes(sshAddress, sshport, cmds)
 
 		/* generate ssh key */
