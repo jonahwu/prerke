@@ -9,12 +9,12 @@ import (
 )
 
 type Config struct {
-	Foo string
-	Bar []string
+	Address string
+	Info    []string
 }
 
 type Configs struct {
-	Cfgs []Config `foobars`
+	Cfgs []Config `nodes`
 }
 
 func main() {
@@ -35,7 +35,8 @@ func main() {
 
 	fmt.Printf("--- config:\n%v\n\n", config)
 	fmt.Println("len of cfg", len(config.Cfgs))
-	fmt.Println("len of value", len(config.Cfgs[0].Bar))
-	fmt.Println(config.Cfgs[1].Bar[0])
+	fmt.Println("len of value", len(config.Cfgs[0].Info))
+	fmt.Println("first info value", config.Cfgs[0].Info[0])
+	fmt.Println(config.Cfgs[0].Address)
 
 }

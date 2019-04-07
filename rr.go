@@ -8,7 +8,10 @@ import (
 	//	"github.com/google/goexpect"
 	//	"github.com/google/goterm/term"
 	"golang.org/x/crypto/ssh"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
 	"log"
+	//"os"
 	"regexp"
 	"strings"
 	"time"
@@ -26,6 +29,15 @@ const (
 	//command = `bc -l`
 	timeout = 10 * time.Minute
 )
+
+type Config struct {
+	Address string
+	Info    []string
+}
+
+type Configs struct {
+	Cfgs []Config `nodes`
+}
 
 //sshuser="root"
 //sshpassword="promise"
@@ -262,6 +274,31 @@ func userTask(addr string, port string) {
 
 }
 
+func getAddress() Configs {
+
+	var config Configs
+
+	//filename := os.Args[1]
+	filename := "precluster.yml"
+	source, err := ioutil.ReadFile(filename)
+	if err != nil {
+		panic(err)
+	}
+
+	//  source := []byte(data)
+
+	if err := yaml.Unmarshal(source, &config); err != nil {
+		log.Fatalf("error: %v", err)
+	}
+	fmt.Printf("--- config:\n%v\n\n", config)
+	//fmt.Println("len of cfg", len(config.Cfgs))
+	//fmt.Println("len of value", len(config.Cfgs[0].Info))
+	//fmt.Println("first info value", config.Cfgs[0].Info[0])
+	//fmt.Println(config.Cfgs[0].Address)
+	return config
+
+}
+
 func main() {
 	sshuser = "root"
 	sshpassword = "promise"
@@ -269,41 +306,59 @@ func main() {
 	sshAddress = "172.16.155.170"
 	deployUser = "pentium"
 	var cmds string
+	config := getAddress()
+	//fmt.Println("show first address:", config.Cfgs[0].Address)
+	//fmt.Println("lens of address:", len(config.Cfgs))
+	fmt.Println("----- check for 5 secs--------")
+	time.Sleep(5 * time.Second)
+	for ia := 0; ia < len(config.Cfgs); ia++ {
+		sshAddress = config.Cfgs[ia].Address
+		fmt.Println("installed of address:", sshAddress)
 
-	/*
-		cmd := "curl https://releases.rancher.com/install-docker/17.03.sh | sh"
-		ret := RemoteSSHRun(sshAddress, sshport, cmd)
-		fmt.Println(ret)
-		userTask(sshAddress, sshport)
-	*/
-	/* install docker */
-	cmds = "curl https://releases.rancher.com/install-docker/17.03.sh | sh"
-	remoteTaskPipes(sshAddress, sshport, cmds)
+		cmds = "systemctl stop firewalld;systemctl disable firewalld"
+		remoteTaskPipes(sshAddress, sshport, cmds)
 
-	/* create user */
-	// for ubuntu
-	//cmds = fmt.Sprintf("adduser pentium --gecos \"First Last,RoomNumber,WorkPhone,HomePhone\" --disabled-password;echo \"pentium:%s\" | sudo chpasswd;gpasswd -a pentium docker", sshpassword)
-	cmds = fmt.Sprintf("adduser pentium ;echo \"pentium:%s\" | sudo chpasswd;usermod -aG wheel pentium;gpasswd -a pentium docker", sshpassword)
-	remoteTaskPipes(sshAddress, sshport, cmds)
+		//os.Exit(3)
 
-	/* generate ssh key */
-	//for ubuntu
-	//cmds = "ssh-keygen -t rsa -C \"comment\" -P \"examplePassphrase\" -f \".ssh/id_rsa\" -q"
-	//for centos
-	cmds = "ssh-keygen -t rsa -C \"comment\" -P \"examplePassphrase\" -f \"/root/.ssh/id_rsa\" -q"
-	remoteTaskPipes(sshAddress, sshport, cmds)
-	//remoteExpect()
+		/*
+			cmd := "curl https://releases.rancher.com/install-docker/17.03.sh | sh"
+			ret := RemoteSSHRun(sshAddress, sshport, cmd)
+			fmt.Println(ret)
+			userTask(sshAddress, sshport)
+		*/
+		/* install docker */
+		cmds = "curl https://releases.rancher.com/install-docker/17.03.sh | sh"
+		remoteTaskPipes(sshAddress, sshport, cmds)
 
-	/* ssh-keygen in user pentium */
-	//for ubuntu
-	//cmds = fmt.Sprintf("sudo -iu %s ssh-keygen -t rsa -C \"comment\" -P \"examplePassphrase\" -f \".ssh/id_rsa\" -q", deployUser)
-	//for centos
-	fmt.Println("create remote pentum sshkey")
-	cmds = fmt.Sprintf("sudo -iu %s ssh-keygen -t rsa -C \"comment\" -P \"examplePassphrase\" -f \"/home/%s/.ssh/id_rsa\" -q", deployUser, deployUser)
-	remoteTaskPipes(sshAddress, sshport, cmds)
+		/* create user */
+		// for ubuntu
+		//cmds = fmt.Sprintf("adduser pentium --gecos \"First Last,RoomNumber,WorkPhone,HomePhone\" --disabled-password;echo \"pentium:%s\" | sudo chpasswd;gpasswd -a pentium docker", sshpassword)
+		cmds = fmt.Sprintf("adduser pentium ;echo \"pentium:%s\" | sudo chpasswd;usermod -aG wheel pentium;gpasswd -a pentium docker", sshpassword)
+		remoteTaskPipes(sshAddress, sshport, cmds)
 
-	/* ssh-copy-id something */
-	fmt.Println("into sshcopy")
-	sshCopy(deployUser, sshpassword)
+		/* generate ssh key */
+		//for ubuntu
+		//cmds = "ssh-keygen -t rsa -C \"comment\" -P \"examplePassphrase\" -f \".ssh/id_rsa\" -q"
+		//for centos
+		cmds = "ssh-keygen -t rsa -C \"comment\" -P \"examplePassphrase\" -f \"/root/.ssh/id_rsa\" -q"
+		remoteTaskPipes(sshAddress, sshport, cmds)
+		//remoteExpect()
+
+		/* ssh-keygen in user pentium */
+		//for ubuntu
+		//cmds = fmt.Sprintf("sudo -iu %s ssh-keygen -t rsa -C \"comment\" -P \"examplePassphrase\" -f \".ssh/id_rsa\" -q", deployUser)
+		//for centos
+		fmt.Println("create remote pentum sshkey")
+		cmds = fmt.Sprintf("sudo -iu %s ssh-keygen -t rsa -C \"comment\" -P \"examplePassphrase\" -f \"/home/%s/.ssh/id_rsa\" -q", deployUser, deployUser)
+		remoteTaskPipes(sshAddress, sshport, cmds)
+
+		/* ssh-copy-id something */
+		fmt.Println("into sshcopy")
+		sshCopy(deployUser, sshpassword)
+	}
+
+	fmt.Println("trying launch the following command for testing")
+	fmt.Println("sudo -u pentium ssh 'pentium@172.16.155.170' docker ps")
+	fmt.Println("sudo -u pentium ssh 'pentium@172.16.155.170' systemctl status firewalld")
 
 }
