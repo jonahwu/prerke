@@ -1,0 +1,187 @@
+package main
+
+import (
+	"bytes"
+	"fmt"
+	//"glog"
+	gexpect "github.com/ThomasRooney/gexpect"
+	//	"github.com/google/goexpect"
+	//	"github.com/google/goterm/term"
+	"golang.org/x/crypto/ssh"
+	"log"
+	"regexp"
+	"strings"
+	"time"
+)
+
+var sshuser string
+var sshpassword string
+var sshport string
+var sshAddress string
+var piRE = regexp.MustCompile(`3.14[0-9]*`)
+var promptRE = regexp.MustCompile(`password`)
+
+const (
+	//command = `bc -l`
+	timeout = 10 * time.Minute
+)
+
+//sshuser="root"
+//sshpassword="promise"
+
+func RemoteSSHRun(addr string, port string, cmd string) string {
+	ce := func(err error, msg string) {
+		if err != nil {
+			log.Fatalf("%s error: %v", msg, err)
+		}
+	}
+	addrPort := fmt.Sprintf("%s:%s", addr, port)
+	//client, err := ssh.Dial("tcp", "172.16.155.137:22", &ssh.ClientConfig{
+	fmt.Println(addrPort)
+	client, err := ssh.Dial("tcp", addrPort, &ssh.ClientConfig{
+		User:            sshuser,
+		Auth:            []ssh.AuthMethod{ssh.Password(sshpassword)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		//Auth: []ssh.AuthMethod{ssh.Password("^Two^Ten=1024$")},
+	})
+	ce(err, "dial")
+
+	session, err := client.NewSession()
+	if err != nil {
+		fmt.Println(err)
+	}
+	//ce(err, "new session")
+	defer session.Close()
+	var b bytes.Buffer
+	session.Stdout = &b
+	//if err := session.Run("/usr/bin/whoami"); err != nil {
+	//cmd := "ls -al > scrremote"
+	if err := session.Run(cmd); err != nil {
+		panic("Failed to run: " + err.Error())
+	}
+	fmt.Println(b.String())
+	return b.String()
+
+}
+
+func sshCopy() {
+	//command := ""
+	cmd := fmt.Sprintf("/usr/bin/ssh-copy-id %s", sshAddress)
+	child, err := gexpect.Spawn(cmd)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("into expect")
+	child.Expect("password")
+	fmt.Println("end expect")
+	child.SendLine("promise")
+	child.Interact()
+	child.Close()
+}
+
+func userTask(addr string, port string) {
+	ce := func(err error, msg string) {
+		if err != nil {
+			log.Fatalf("%s error: %v", msg, err)
+		}
+	}
+	addrPort := fmt.Sprintf("%s:%s", addr, port)
+	//client, err := ssh.Dial("tcp", "172.16.155.137:22", &ssh.ClientConfig{
+	fmt.Println(addrPort)
+	client, err := ssh.Dial("tcp", addrPort, &ssh.ClientConfig{
+		User:            sshuser,
+		Auth:            []ssh.AuthMethod{ssh.Password(sshpassword)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		//Auth: []ssh.AuthMethod{ssh.Password("^Two^Ten=1024$")},
+	})
+	ce(err, "dial")
+
+	session, err := client.NewSession()
+	if err != nil {
+		fmt.Println(err)
+	}
+	//ce(err, "new session")
+	defer session.Close()
+	//var b bytes.Buffer
+	//session.Stdout = &b
+
+	stdinBuf, _ := session.StdinPipe()
+
+	var outbt, errbt bytes.Buffer
+	session.Stdout = &outbt
+
+	session.Stderr = &errbt
+	modes := ssh.TerminalModes{
+		ssh.ECHO:          0,     // disable echoing
+		ssh.TTY_OP_ISPEED: 14400, // input speed = 14.4kbaud
+		ssh.TTY_OP_OSPEED: 14400, // output speed = 14.4kbaud
+	}
+
+	if err := session.RequestPty("xterm", 80, 40, modes); err != nil {
+		log.Fatal(err)
+	}
+	err = session.Shell()
+	//cmds := "ls;ls -alh > ss;exit"
+	cmds := "adduser pentium;promise;promise;1;1;1;1;1;Y;ls;exit"
+	cmdlist := strings.Split(cmds, ";")
+	for _, c := range cmdlist {
+		c = c + "\n"
+		stdinBuf.Write([]byte(c))
+		fmt.Println(c)
+		fmt.Println(session.Stdout)
+
+	}
+	session.Wait()
+	fmt.Println((outbt.String() + errbt.String()))
+	return
+	//if err := session.Run("/usr/bin/whoami"); err != nil {
+	//cmd := "ls -al > scrremote"
+
+}
+
+func main() {
+	sshuser = "root"
+	sshpassword = "promise"
+	sshport = "22"
+	sshAddress = "172.16.155.137"
+
+	/* remote ssh run something */
+	//cmd := "ls -al > scrremote2"
+	//cmd := "curl https://releases.rancher.com/install-docker/17.03.sh -o bb"
+	//cmd := "curl https://releases.rancher.com/install-docker/17.03.sh | sh"
+	//ret := RemoteSSHRun(sshAddress, sshport, cmd)
+	//fmt.Println(ret)
+	userTask(sshAddress, sshport)
+	//remoteExpect()
+
+	/* ssh-copy-id something */
+	//sshCopy()
+
+}
+
+func remoteExpect() {
+	//command := ""
+	cmd := fmt.Sprintf("ssh root@%s", sshAddress)
+	child, err := gexpect.Spawn(cmd)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("into expect")
+	//child.Expect("password")
+	//fmt.Println("end expect")
+	/*
+		child.SendLine("touch here")
+		child.SendLine("passwd pentium")
+		child.Expect("password")
+		child.SendLine("promise\n")
+		child.Expect("password")
+		child.SendLine("promise\n")
+	*/
+	err = child.SendLine("ls -alh > scrrr")
+	//err = child.SendLine("touch 2")
+	//err = child.Send("sudo gpasswd -a pentium docker")
+	fmt.Println(err)
+	child.Interact()
+	err = child.SendLine("ls -alh > scrrr")
+	child.Close()
+}
