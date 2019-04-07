@@ -22,7 +22,6 @@ var sshpassword string
 var sshport string
 var sshAddress string
 var deployUser string
-var piRE = regexp.MustCompile(`3.14[0-9]*`)
 var promptRE = regexp.MustCompile(`password`)
 
 const (
@@ -209,7 +208,9 @@ func getPasswd() string {
 		panic(err)
 	}
 	fmt.Println("password:", string(passwd))
-	return strings.Trim(string(passwd), "\n")
+	s := strings.Trim(string(passwd), "\n")
+	s = strings.TrimSpace(s)
+	return s
 }
 
 func getAddress() Configs {
@@ -239,7 +240,7 @@ func getAddress() Configs {
 
 func main() {
 	sshuser = "root"
-	sshpassword = "promise"
+	sshpassword = "pentiumvm"
 	sshport = "22"
 	sshAddress = "172.16.155.170"
 	deployUser = "pentium"
