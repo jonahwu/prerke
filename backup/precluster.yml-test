@@ -1,0 +1,11 @@
+nodes:
+- address: 172.16.155.170
+  info:
+    - one
+    - two
+    - three
+- address: 172.16.155.171
+  info:
+    - one
+    - two
+    - three

@@ -29,14 +29,21 @@ const (
 	timeout = 10 * time.Minute
 )
 
-type Config struct {
+type Configs struct {
+	Password string
+	Nodes    []AddressConfig
+}
+
+type AddressConfig struct {
 	Address string
 	Info    []string
 }
 
+/*
 type Configs struct {
 	Cfgs []Config `nodes`
 }
+*/
 
 //sshuser="root"
 //sshpassword="promise"
@@ -225,11 +232,14 @@ func getAddress() Configs {
 	}
 
 	//  source := []byte(data)
-
-	if err := yaml.Unmarshal(source, &config); err != nil {
-		log.Fatalf("error: %v", err)
+	fmt.Println("raw file:", string(source))
+	err = yaml.Unmarshal(source, &config)
+	if err != nil {
+		panic(err)
 	}
-	fmt.Printf("--- config:\n%v\n\n", config)
+	//fmt.Printf("--- config:\n%v\n\n", config)
+	fmt.Println("shown in reading", config.Nodes)
+	fmt.Println("shown in reading", config.Password)
 	//fmt.Println("len of cfg", len(config.Cfgs))
 	//fmt.Println("len of value", len(config.Cfgs[0].Info))
 	//fmt.Println("first info value", config.Cfgs[0].Info[0])
@@ -240,20 +250,21 @@ func getAddress() Configs {
 
 func main() {
 	sshuser = "root"
-	sshpassword = "pentiumvm"
+	sshpassword = "promise"
 	sshport = "22"
 	sshAddress = "172.16.155.170"
 	deployUser = "pentium"
 	var cmds string
 	config := getAddress()
-	sshpassword := getPasswd()
-	//fmt.Println("password:", sshpassword, sshpassword1, len(sshpassword), len(sshpassword1))
+	sshpassword1 := config.Password
+	//sshpassword := getPasswd()
+	fmt.Println("password:", sshpassword, sshpassword1, len(sshpassword), len(sshpassword1))
 	//fmt.Println("show first address:", config.Cfgs[0].Address)
 	//fmt.Println("lens of address:", len(config.Cfgs))
 	fmt.Println("----- check for 5 secs--------")
 	time.Sleep(5 * time.Second)
-	for ia := 0; ia < len(config.Cfgs); ia++ {
-		sshAddress = config.Cfgs[ia].Address
+	for ia := 0; ia < len(config.Nodes); ia++ {
+		sshAddress = config.Nodes[ia].Address
 		fmt.Println("installed of address:", sshAddress)
 
 		cmds = "systemctl stop firewalld;systemctl disable firewalld"

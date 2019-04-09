@@ -1,1 +1,1 @@
-go run rr.go rcmd.go
+go run rr.go 

@@ -1,0 +1,13 @@
+password: promise
+nodes:
+  - address: one
+    info:
+      - a 
+      - b
+      - c
+
+  - address: two
+    info:
+      - a 
+      - b
+      - c
