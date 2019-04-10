@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"log"
 	//"os"
+	//"errors"
 	"regexp"
 	"strings"
 	"time"
@@ -37,6 +38,15 @@ type Configs struct {
 type AddressConfig struct {
 	Address string
 	Info    []string
+}
+
+type RkeUserConfig struct {
+	Address string
+	User    string
+}
+
+type RkeConfig struct {
+	Nodes []RkeUserConfig
 }
 
 /*
@@ -220,6 +230,25 @@ func getPasswd() string {
 	return s
 }
 
+func getRkeUser() (string, error) {
+
+	var config RkeConfig
+	filename := "cluster.yml"
+	source, err := ioutil.ReadFile(filename)
+	if err != nil {
+		fmt.Println(err)
+		return "", err
+	}
+	fmt.Println("raw file:", string(source))
+	err = yaml.Unmarshal(source, &config)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("shown in rke user reading", config.Nodes[0].User)
+	return config.Nodes[0].User, nil
+
+}
+
 func getAddress() Configs {
 
 	var config Configs
@@ -255,6 +284,11 @@ func main() {
 	sshAddress = "172.16.155.170"
 	deployUser = "pentium"
 	var cmds string
+	if user, err := getRkeUser(); err != nil {
+		fmt.Println(err)
+	} else {
+		deployUser = user
+	}
 	config := getAddress()
 	sshpassword1 := config.Password
 	//sshpassword := getPasswd()
@@ -262,6 +296,10 @@ func main() {
 	//fmt.Println("show first address:", config.Cfgs[0].Address)
 	//fmt.Println("lens of address:", len(config.Cfgs))
 	fmt.Println("----- check for 5 secs--------")
+	fmt.Println("deploy user:", deployUser)
+	fmt.Println("deploy password:", sshpassword)
+	fmt.Println("deploy node:", config.Nodes)
+	fmt.Println("------------------------------")
 	time.Sleep(5 * time.Second)
 	for ia := 0; ia < len(config.Nodes); ia++ {
 		sshAddress = config.Nodes[ia].Address
@@ -286,8 +324,10 @@ func main() {
 		// for ubuntu
 		//cmds = fmt.Sprintf("adduser pentium --gecos \"First Last,RoomNumber,WorkPhone,HomePhone\" --disabled-password;echo \"pentium:%s\" | sudo chpasswd;gpasswd -a pentium docker", sshpassword)
 		//cmds = fmt.Sprintf("adduser pentium ;echo \"pentium:%s\" | sudo chpasswd;usermod -aG wheel pentium;gpasswd -a pentium docker", sshpassword)
-		cmds = fmt.Sprintf("adduser %s ;echo \"%s:%s\" | sudo chpasswd;usermod -aG wheel %s;gpasswd -a %s docker", deployUser, deployUser, sshpassword, deployUser, deployUser)
-		remoteTaskPipes(sshAddress, sshport, cmds)
+		if deployUser != "root" {
+			cmds = fmt.Sprintf("adduser %s ;echo \"%s:%s\" | sudo chpasswd;usermod -aG wheel %s;gpasswd -a %s docker", deployUser, deployUser, sshpassword, deployUser, deployUser)
+			remoteTaskPipes(sshAddress, sshport, cmds)
+		}
 
 		/* generate ssh key */
 		//for ubuntu
@@ -301,9 +341,15 @@ func main() {
 		//for ubuntu
 		//cmds = fmt.Sprintf("sudo -iu %s ssh-keygen -t rsa -C \"comment\" -P \"examplePassphrase\" -f \".ssh/id_rsa\" -q", deployUser)
 		//for centos
+
 		fmt.Println("create remote pentum sshkey")
-		cmds = fmt.Sprintf("sudo -iu %s ssh-keygen -t rsa -C \"comment\" -P \"examplePassphrase\" -f \"/home/%s/.ssh/id_rsa\" -q", deployUser, deployUser)
-		remoteTaskPipes(sshAddress, sshport, cmds)
+		if deployUser != "root" {
+			deployPath := fmt.Sprintf("/home/%s", deployUser)
+
+			//cmds = fmt.Sprintf("sudo -iu %s ssh-keygen -t rsa -C \"comment\" -P \"examplePassphrase\" -f \"/home/%s/.ssh/id_rsa\" -q", deployUser, deployUser)
+			cmds = fmt.Sprintf("sudo -iu %s ssh-keygen -t rsa -C \"comment\" -P \"examplePassphrase\" -f \"%s/.ssh/id_rsa\" -q", deployUser, deployPath)
+			remoteTaskPipes(sshAddress, sshport, cmds)
+		}
 
 		/* ssh-copy-id something */
 		fmt.Println("into sshcopy")
