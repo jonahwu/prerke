@@ -1,4 +1,5 @@
 #image install:  curl https://releases.rancher.com/install-docker/17.03.sh | sh
+# ignote dockerversion will install 17.03 as default image
 password: promise
 nodes:
   - address: 172.16.155.241
