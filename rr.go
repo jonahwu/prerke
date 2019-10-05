@@ -201,7 +201,7 @@ func createSshKey(addr string, port string) {
 		log.Fatal(err)
 	}
 	err = session.Shell()
-	cmds := "ssh-keygen -t rsa -C \"comment\" -P \"examplePassphrase\" -f \".ssh/id_rsa\" -q; exit"
+	cmds := "ssh-keygen -t rsa -C \"comment\" -P \"\" -f \".ssh/id_rsa\" -q; exit"
 	cmdlist := strings.Split(cmds, ";")
 	for _, c := range cmdlist {
 		c = c + "\n"
@@ -333,7 +333,7 @@ func main() {
 		//for ubuntu
 		//cmds = "ssh-keygen -t rsa -C \"comment\" -P \"examplePassphrase\" -f \".ssh/id_rsa\" -q"
 		//for centos
-		cmds = "ssh-keygen -t rsa -C \"comment\" -P \"examplePassphrase\" -f \"/root/.ssh/id_rsa\" -q"
+		cmds = "ssh-keygen -t rsa -C \"comment\" -P \"\" -f \"/root/.ssh/id_rsa\" -q"
 		remoteTaskPipes(sshAddress, sshport, cmds)
 		//remoteExpect()
 
@@ -347,7 +347,7 @@ func main() {
 			deployPath := fmt.Sprintf("/home/%s", deployUser)
 
 			//cmds = fmt.Sprintf("sudo -iu %s ssh-keygen -t rsa -C \"comment\" -P \"examplePassphrase\" -f \"/home/%s/.ssh/id_rsa\" -q", deployUser, deployUser)
-			cmds = fmt.Sprintf("sudo -iu %s ssh-keygen -t rsa -C \"comment\" -P \"examplePassphrase\" -f \"%s/.ssh/id_rsa\" -q", deployUser, deployPath)
+			cmds = fmt.Sprintf("sudo -iu %s  sh -c 'ssh-keygen -t rsa -C \"comment\" -P \"\" -f \"%s/.ssh/id_rsa\" -q '", deployUser, deployPath)
 			remoteTaskPipes(sshAddress, sshport, cmds)
 		}
 
