@@ -333,8 +333,11 @@ func main() {
 		//for ubuntu
 		//cmds = "ssh-keygen -t rsa -C \"comment\" -P \"examplePassphrase\" -f \".ssh/id_rsa\" -q"
 		//for centos
-		cmds = "ssh-keygen -t rsa -C \"comment\" -P \"\" -f \"/root/.ssh/id_rsa\" -q"
-		remoteTaskPipes(sshAddress, sshport, cmds)
+
+		//generate sshkey in root space
+		//cmds = "ssh-keygen -t rsa -C \"comment\" -P \"\" -f \"/root/.ssh/id_rsa\" -q"
+		//remoteTaskPipes(sshAddress, sshport, cmds)
+
 		//remoteExpect()
 
 		/* ssh-keygen in user pentium */
@@ -348,6 +351,7 @@ func main() {
 
 			//cmds = fmt.Sprintf("sudo -iu %s ssh-keygen -t rsa -C \"comment\" -P \"examplePassphrase\" -f \"/home/%s/.ssh/id_rsa\" -q", deployUser, deployUser)
 			cmds = fmt.Sprintf("sudo -iu %s  sh -c 'ssh-keygen -t rsa -C \"comment\" -P \"\" -f \"%s/.ssh/id_rsa\" -q '", deployUser, deployPath)
+			fmt.Println("remote command:", cmds)
 			remoteTaskPipes(sshAddress, sshport, cmds)
 		}
 
