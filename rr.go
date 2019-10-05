@@ -350,7 +350,7 @@ func main() {
 			deployPath := fmt.Sprintf("/home/%s", deployUser)
 
 			//cmds = fmt.Sprintf("sudo -iu %s ssh-keygen -t rsa -C \"comment\" -P \"examplePassphrase\" -f \"/home/%s/.ssh/id_rsa\" -q", deployUser, deployUser)
-			cmds = fmt.Sprintf("sudo -iu %s  sh -c 'ssh-keygen -t rsa -C \"comment\" -P \"\" -f \"%s/.ssh/id_rsa\" -q '", deployUser, deployPath)
+			cmds = fmt.Sprintf("sudo -iu %s  sh -c 'echo \"y\"|ssh-keygen -t rsa -C \"comment\" -P \"\" -f \"%s/.ssh/id_rsa\" -q '", deployUser, deployPath)
 			fmt.Println("remote command:", cmds)
 			remoteTaskPipes(sshAddress, sshport, cmds)
 		}
