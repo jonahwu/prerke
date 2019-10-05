@@ -36,8 +36,9 @@ type Configs struct {
 }
 
 type AddressConfig struct {
-	Address string
-	Info    []string
+	Address       string
+	Info          []string
+	Dockerversion string
 }
 
 type RkeUserConfig struct {
@@ -303,7 +304,12 @@ func main() {
 	time.Sleep(5 * time.Second)
 	for ia := 0; ia < len(config.Nodes); ia++ {
 		sshAddress = config.Nodes[ia].Address
+		installdocker := config.Nodes[ia].Dockerversion
 		fmt.Println("installed of address:", sshAddress)
+		if installdocker == "" {
+			installdocker = "https://releases.rancher.com/install-docker/17.03.sh"
+		}
+		fmt.Println("installed of docker location:", installdocker)
 
 		cmds = "systemctl stop firewalld;systemctl disable firewalld"
 		remoteTaskPipes(sshAddress, sshport, cmds)
@@ -317,7 +323,8 @@ func main() {
 			userTask(sshAddress, sshport)
 		*/
 		/* install docker */
-		cmds = "curl https://releases.rancher.com/install-docker/17.03.sh | sh"
+		cmds = fmt.Sprintf("curl %s | sh", installdocker)
+		//cmds = "curl https://releases.rancher.com/install-docker/17.03.sh | sh"
 		remoteTaskPipes(sshAddress, sshport, cmds)
 
 		/* create user */
@@ -358,10 +365,9 @@ func main() {
 		/* ssh-copy-id something */
 		fmt.Println("into sshcopy")
 		sshCopy(deployUser, sshpassword)
+		fmt.Println("trying launch the following command for testing")
+		fmt.Printf("sudo -u pentium ssh 'pentium@%s' docker ps \n", sshAddress)
+		fmt.Printf("sudo -u pentium ssh 'pentium@%s' systemctl status firewalld\n", sshAddress)
 	}
-
-	fmt.Println("trying launch the following command for testing")
-	fmt.Println("sudo -u pentium ssh 'pentium@172.16.155.170' docker ps")
-	fmt.Println("sudo -u pentium ssh 'pentium@172.16.155.170' systemctl status firewalld")
 
 }

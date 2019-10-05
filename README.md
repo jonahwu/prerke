@@ -28,6 +28,8 @@ where the server's root password is promise shown as followed.
 for the precluster.yml
 
 ```
+
+#image install:  curl https://releases.rancher.com/install-docker/17.03.sh | sh
 password: promise
 nodes:
   - address: 172.16.155.241
@@ -35,9 +37,11 @@ nodes:
       - a
       - b
       - c
+    dockerversion: https://releases.rancher.com/install-docker/17.03.sh
   - address: 172.16.155.242
     info:
       - a
       - b
       - c
+    dockerversion: https://releases.rancher.com/install-docker/17.03.sh
 ```
