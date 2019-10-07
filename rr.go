@@ -36,8 +36,9 @@ type Configs struct {
 }
 
 type AddressConfig struct {
-	Address string
-	Info    []string
+	Address       string
+	Info          []string
+	Dockerversion string
 }
 
 type RkeUserConfig struct {
@@ -67,9 +68,11 @@ func RemoteSSHRun(addr string, port string, cmd string) string {
 	addrPort := fmt.Sprintf("%s:%s", addr, port)
 	//client, err := ssh.Dial("tcp", "172.16.155.137:22", &ssh.ClientConfig{
 	fmt.Println(addrPort)
+	//client, err := ssh.Dial("tcp", addrPort, &ssh.ClientConfig{
 	client, err := ssh.Dial("tcp", addrPort, &ssh.ClientConfig{
 		User:            sshuser,
 		Auth:            []ssh.AuthMethod{ssh.Password(sshpassword)},
+		Timeout:         time.Second * 10,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		//Auth: []ssh.AuthMethod{ssh.Password("^Two^Ten=1024$")},
 	})
@@ -110,6 +113,60 @@ func sshCopy(deployUser string, sshpassword string) {
 	child.Interact()
 	child.Close()
 }
+func remoteTaskPipesNoWait(addr string, port string, cmds string) {
+	ce := func(err error, msg string) {
+		if err != nil {
+			log.Fatalf("%s error: %v", msg, err)
+		}
+	}
+	addrPort := fmt.Sprintf("%s:%s", addr, port)
+	fmt.Println(addrPort)
+	client, err := ssh.Dial("tcp", addrPort, &ssh.ClientConfig{
+		User:            sshuser,
+		Auth:            []ssh.AuthMethod{ssh.Password(sshpassword)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	})
+	ce(err, "dial")
+
+	session, err := client.NewSession()
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer session.Close()
+
+	stdinBuf, _ := session.StdinPipe()
+
+	var outbt, errbt bytes.Buffer
+	session.Stdout = &outbt
+
+	session.Stderr = &errbt
+	modes := ssh.TerminalModes{
+		ssh.ECHO:          0,     // disable echoing
+		ssh.TTY_OP_ISPEED: 14400, // input speed = 14.4kbaud
+		ssh.TTY_OP_OSPEED: 14400, // output speed = 14.4kbaud
+	}
+
+	if err := session.RequestPty("xterm", 80, 40, modes); err != nil {
+		log.Fatal(err)
+	}
+	err = session.Shell()
+	cmds = fmt.Sprintf("%s;%s", cmds, "exit")
+	fmt.Println(cmds)
+	//cmds := "ssh-keygen -t rsa -C \"comment\" -P \"examplePassphrase\" -f \".ssh/id_rsa\" -q; exit"
+	cmdlist := strings.Split(cmds, ";")
+	for _, c := range cmdlist {
+		c = c + "\n"
+		stdinBuf.Write([]byte(c))
+		fmt.Println(c)
+
+	}
+	time.Sleep(10 * time.Second)
+
+	return
+	//if err := session.Run("/usr/bin/whoami"); err != nil {
+	//cmd := "ls -al > scrremote"
+}
+
 func remoteTaskPipes(addr string, port string, cmds string) {
 	ce := func(err error, msg string) {
 		if err != nil {
@@ -148,6 +205,7 @@ func remoteTaskPipes(addr string, port string, cmds string) {
 	}
 	err = session.Shell()
 	cmds = fmt.Sprintf("%s;%s", cmds, "exit")
+	fmt.Println(cmds)
 	//cmds := "ssh-keygen -t rsa -C \"comment\" -P \"examplePassphrase\" -f \".ssh/id_rsa\" -q; exit"
 	cmdlist := strings.Split(cmds, ";")
 	for _, c := range cmdlist {
@@ -157,7 +215,11 @@ func remoteTaskPipes(addr string, port string, cmds string) {
 
 	}
 
-	session.Wait()
+	err = session.Wait()
+	fmt.Println("session out")
+	//if err != nil {
+	//		log.Fatal(err)
+	//	}
 	fmt.Println((outbt.String() + errbt.String()))
 	return
 	//if err := session.Run("/usr/bin/whoami"); err != nil {
@@ -201,7 +263,7 @@ func createSshKey(addr string, port string) {
 		log.Fatal(err)
 	}
 	err = session.Shell()
-	cmds := "ssh-keygen -t rsa -C \"comment\" -P \"examplePassphrase\" -f \".ssh/id_rsa\" -q; exit"
+	cmds := "ssh-keygen -t rsa -C \"comment\" -P \"\" -f \".ssh/id_rsa\" -q; exit"
 	cmdlist := strings.Split(cmds, ";")
 	for _, c := range cmdlist {
 		c = c + "\n"
@@ -280,6 +342,7 @@ func getAddress() Configs {
 func main() {
 	sshuser = "root"
 	sshpassword = "promise"
+	//sshpassword = "pentiumvm"
 	sshport = "22"
 	sshAddress = "172.16.155.170"
 	deployUser = "pentium"
@@ -292,6 +355,7 @@ func main() {
 	config := getAddress()
 	sshpassword1 := config.Password
 	//sshpassword := getPasswd()
+	sshpassword = sshpassword1
 	fmt.Println("password:", sshpassword, sshpassword1, len(sshpassword), len(sshpassword1))
 	//fmt.Println("show first address:", config.Cfgs[0].Address)
 	//fmt.Println("lens of address:", len(config.Cfgs))
@@ -303,10 +367,20 @@ func main() {
 	time.Sleep(5 * time.Second)
 	for ia := 0; ia < len(config.Nodes); ia++ {
 		sshAddress = config.Nodes[ia].Address
+		installdocker := config.Nodes[ia].Dockerversion
 		fmt.Println("installed of address:", sshAddress)
+		if installdocker == "" {
+			installdocker = "https://releases.rancher.com/install-docker/17.03.sh"
+		}
+		fmt.Println("installed of docker location:", installdocker)
 
-		cmds = "systemctl stop firewalld;systemctl disable firewalld"
-		remoteTaskPipes(sshAddress, sshport, cmds)
+		//cmds = "systemctl stop firewalld"
+		cmds = "systemctl stop firewalld"
+		remoteTaskPipesNoWait(sshAddress, sshport, cmds)
+		fmt.Println("remove firewalld done")
+		cmds = "systemctl disable firewalld"
+		remoteTaskPipesNoWait(sshAddress, sshport, cmds)
+		fmt.Println("disable firewalld done")
 
 		//os.Exit(3)
 
@@ -317,7 +391,8 @@ func main() {
 			userTask(sshAddress, sshport)
 		*/
 		/* install docker */
-		cmds = "curl https://releases.rancher.com/install-docker/17.03.sh | sh"
+		cmds = fmt.Sprintf("curl %s | sh", installdocker)
+		//cmds = "curl https://releases.rancher.com/install-docker/17.03.sh | sh"
 		remoteTaskPipes(sshAddress, sshport, cmds)
 
 		/* create user */
@@ -333,8 +408,11 @@ func main() {
 		//for ubuntu
 		//cmds = "ssh-keygen -t rsa -C \"comment\" -P \"examplePassphrase\" -f \".ssh/id_rsa\" -q"
 		//for centos
-		cmds = "ssh-keygen -t rsa -C \"comment\" -P \"examplePassphrase\" -f \"/root/.ssh/id_rsa\" -q"
-		remoteTaskPipes(sshAddress, sshport, cmds)
+
+		//generate sshkey in root space
+		//cmds = "ssh-keygen -t rsa -C \"comment\" -P \"\" -f \"/root/.ssh/id_rsa\" -q"
+		//remoteTaskPipes(sshAddress, sshport, cmds)
+
 		//remoteExpect()
 
 		/* ssh-keygen in user pentium */
@@ -347,17 +425,17 @@ func main() {
 			deployPath := fmt.Sprintf("/home/%s", deployUser)
 
 			//cmds = fmt.Sprintf("sudo -iu %s ssh-keygen -t rsa -C \"comment\" -P \"examplePassphrase\" -f \"/home/%s/.ssh/id_rsa\" -q", deployUser, deployUser)
-			cmds = fmt.Sprintf("sudo -iu %s ssh-keygen -t rsa -C \"comment\" -P \"examplePassphrase\" -f \"%s/.ssh/id_rsa\" -q", deployUser, deployPath)
+			cmds = fmt.Sprintf("sudo -iu %s  sh -c 'echo \"y\"|ssh-keygen -t rsa -C \"comment\" -P \"\" -f \"%s/.ssh/id_rsa\" -q '", deployUser, deployPath)
+			fmt.Println("remote command:", cmds)
 			remoteTaskPipes(sshAddress, sshport, cmds)
 		}
 
 		/* ssh-copy-id something */
 		fmt.Println("into sshcopy")
 		sshCopy(deployUser, sshpassword)
+		fmt.Println("trying launch the following command for testing")
+		fmt.Printf("sudo -u pentium ssh 'pentium@%s' docker ps \n", sshAddress)
+		fmt.Printf("sudo -u pentium ssh 'pentium@%s' systemctl status firewalld\n", sshAddress)
 	}
-
-	fmt.Println("trying launch the following command for testing")
-	fmt.Println("sudo -u pentium ssh 'pentium@172.16.155.170' docker ps")
-	fmt.Println("sudo -u pentium ssh 'pentium@172.16.155.170' systemctl status firewalld")
 
 }
